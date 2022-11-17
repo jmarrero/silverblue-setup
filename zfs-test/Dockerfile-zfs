@@ -1,0 +1,30 @@
+FROM ghcr.io/cgwalters/fedora-silverblue:37 as kernel-query
+#We can't use the `uname -r` as it will pick up the host kernel version
+RUN rpm -qa kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}' > /kernel-version.txt
+
+# Using https://openzfs.github.io/openzfs-docs/Developer%20Resources/Custom%20Packages.html
+FROM registry.fedoraproject.org/fedora:37 as builder
+COPY --from=kernel-query /kernel-version.txt /kernel-version.txt
+WORKDIR /etc/yum.repos.d
+RUN curl -L -O https://src.fedoraproject.org/rpms/fedora-repos/raw/f37/f/fedora-updates-archive.repo && \
+    sed -i 's/enabled=AUTO_VALUE/enabled=true/' fedora-updates-archive.repo
+RUN dnf install -y dkms gcc make autoconf automake libtool rpm-build libtirpc-devel libblkid-devel \
+    libuuid-devel libudev-devel openssl-devel zlib-devel libaio-devel libattr-devel elfutils-libelf-devel \
+    kernel-$(cat /kernel-version.txt) kernel-modules-$(cat /kernel-version.txt) kernel-devel-$(cat /kernel-version.txt) \
+    python3 python3-devel python3-setuptools python3-cffi libffi-devel git ncompress libcurl-devel
+WORKDIR /
+RUN curl -L -O https://github.com/openzfs/zfs/releases/download/zfs-2.1.6/zfs-2.1.6.tar.gz && tar xzf zfs-2.1.6.tar.gz
+WORKDIR /zfs-2.1.6
+RUN ./configure -with-linux=/usr/src/kernels/$(cat /kernel-version.txt)/ -with-linux-obj=/usr/src/kernels/$(cat /kernel-version.txt)/ \
+    && make -j1 rpm-utils rpm-kmod
+
+FROM ghcr.io/cgwalters/fedora-silverblue:37
+COPY --from=builder /zfs-2.1.6/*.rpm /
+RUN rpm-ostree install /*.$(uname -p).rpm && \
+    rpm-ostree cleanup -m 
+# &&  ostree container commit this is doing hard failures now.
+#Found file: "var/lib/pcp/config/derived/cpu-util.conf"
+#Found file: "var/lib/pcp/config/derived/iostat.conf"
+#Found file: "var/lib/pcp/config/derived/mssql.conf"
+#Found file: "var/lib/pcp/config/derived/proc.conf"
+#error: Found content in var

@@ -19,5 +19,6 @@ RUN rpm-ostree install \
     solaar \
     # third party
     code \
-    # rpm-ostree cleanup and verification stage
-    && rpm-ostree cleanup -m && ostree container commit
+    #cleanup and verification stage
+    && rm -rf /var/lib/unbound \
+    && ostree container commit
