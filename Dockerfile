@@ -14,7 +14,7 @@ RUN rpm-ostree install \
     # dev tools
     #make xsel \
     # preffered tools
-    zsh 
+    zsh \
     #neofetch \
     # logitech mouse/keyboard pairing
     solaar \
