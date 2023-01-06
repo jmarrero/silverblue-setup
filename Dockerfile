@@ -12,7 +12,7 @@ RUN rpm-ostree install \
     # dev tools
     make xsel \
     # preffered tools
-    zsh neofetch \
+    zsh neofetch gnome-tweak-tool \
     # logitech mouse/keyboard pairing
     solaar \
     #cleanup and verification stage
