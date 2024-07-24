@@ -1,7 +1,12 @@
-FROM quay.io/fedora/fedora-silverblue:39
-RUN rpm-ostree install \
+FROM quay.io/fedora/fedora-kinoite:40
+RUN mkdir /workdir
+WORKDIR /workdir
+COPY . .
+# First install bootc and dnf until Fedora 41...
+RUN rpm-ostree install bootc dnf5 && ln -s /usr/bin/dnf5 /usr/bin/dnf && \
+    dnf -y install \
     # sign git tags for releases
-    git-evtag \
+    git-evtag pinentry \
     # local debug tools 
     htop ripgrep  \
     # kerberos auth
@@ -12,11 +17,12 @@ RUN rpm-ostree install \
     # dev tools
     make xsel strace \
     # preffered tools
-    neofetch gnome-tweak-tool util-linux-user fish gnome-console \
-    # logitech mouse/keyboard pairing
-    solaar \
-    # remove gnome-terminal
-    && rpm-ostree override remove gnome-terminal-nautilus gnome-terminal \
+    util-linux-user nu tmux neovim \
+    # logitech mouse/keyboard pairing & apple superdrive
+    solaar sg3_utils && \
+    # Add nu to shells
+    echo "nu" >> /etc/shells && \
+    # Mount rules for apple external dvd drive
+    mv 99-local.rules /etc/udev/rules.d/ && \
     # cleanup and verification stage
-    && rm -rf /var/lib/unbound \
-    && ostree container commit
+    rm -rf /var/lib/unbound && rm -rf /workdir && ostree container commit
