@@ -21,13 +21,12 @@ RUN rpm-ostree install bootc dnf5 dnf5-plugins && ln -s /usr/bin/dnf5 /usr/bin/d
     # preffered tools
     util-linux-user nu tmux neovim code \
     # logitech mouse/keyboard pairing & apple superdrive
-    solaar sg3_utils && \
+    solaar sg3_utils \
+    # add podman-machine for podman-bootc
+    podman-machine && \
     # Install podman-bootc thru copr
     dnf -y install 'dnf-command(copr)' && \
     dnf -y copr enable gmaglione/podman-bootc && \
     dnf -y install podman-bootc && \
-    ## podman machine workaround on 5.2 until podman-machine subpackage is added...
-    ## https://github.com/containers/podman/issues/23127
-    dnf -y install https://kojipkgs.fedoraproject.org//packages/podman/5.2.0/1.fc40/x86_64/podman-machine-5.2.0-1.fc40.x86_64.rpm && \
     # Add nu to shells
     echo "/usr/bin/nu" >> /etc/shells
