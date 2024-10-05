@@ -19,7 +19,7 @@ RUN rpm-ostree install bootc dnf5 dnf5-plugins && ln -s /usr/bin/dnf5 /usr/bin/d
     # dev tools
     make xsel strace \
     # preffered tools
-    util-linux-user nu tmux neovim code \
+    util-linux-user fish tmux neovim code \
     # logitech mouse/keyboard pairing & apple superdrive
     solaar sg3_utils \
     # add podman-machine for podman-bootc
@@ -27,6 +27,4 @@ RUN rpm-ostree install bootc dnf5 dnf5-plugins && ln -s /usr/bin/dnf5 /usr/bin/d
     # Install podman-bootc thru copr
     dnf -y install 'dnf-command(copr)' && \
     dnf -y copr enable gmaglione/podman-bootc && \
-    dnf -y install podman-bootc && \
-    # Add nu to shells
-    echo "/usr/bin/nu" >> /etc/shells
+    dnf -y install podman-bootc
