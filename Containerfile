@@ -21,7 +21,7 @@ RUN \
     # logitech mouse/keyboard pairing & apple superdrive
     solaar sg3_utils \
     # Virt stack
-    libvirt-daemon-config-network libvirt-daemon-kvm qemu-kvm \
+    libvirt-daemon-config-network libvirt-daemon-kvm qemu-kvm libguestfs-tools virt-resize \
     virt-install virt-manager virt-viewer virtiofsd && \
     # clean up
     dnf clean all && rm -rf /var/* && \
