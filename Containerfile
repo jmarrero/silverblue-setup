@@ -22,7 +22,7 @@ RUN \
     solaar sg3_utils \
     # Virt stack
     libvirt-daemon-config-network libvirt-daemon-kvm qemu-kvm libguestfs-tools virt-resize \
-    virt-install virt-manager virt-viewer virtiofsd && \
+    genisoimage virt-install virt-manager virt-viewer virtiofsd && \
     # clean up
     dnf clean all && rm -rf /var/* && \
     # Rebuild initramfs with ostree, lvm, crypt modules and thunderbolt udev rule
