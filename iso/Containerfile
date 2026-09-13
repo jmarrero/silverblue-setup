@@ -1,0 +1,64 @@
+ARG FEDORA_VERSION=45
+FROM quay.io/fedora/fedora-bootc:${FEDORA_VERSION}
+
+ARG PAYLOAD_IMAGE
+
+# Installer-only environment, based on the upstream generic ISO example:
+# https://osbuild.org/docs/developer-guide/projects/image-builder/advanced/bootc/isos/
+RUN dnf -y install \
+        anaconda anaconda-install-img-deps anaconda-dracut \
+        dracut-config-generic dracut-network net-tools \
+        grub2-efi-x64-cdboot grub2-pc-modules grub2-tools-extra \
+        plymouth default-fonts-core-sans default-fonts-other-sans \
+        google-noto-sans-cjk-fonts xorrisofs squashfs-tools isomd5sum \
+        podman python3 python-unversioned-command jq passwd && \
+    dnf clean all
+
+# Anaconda brings the Python library; the validator CLI is a separate package.
+RUN dnf -y install pykickstart && dnf clean all
+
+COPY iso.yaml /usr/lib/image-builder/bootc/iso.yaml
+COPY anaconda.conf /etc/anaconda/conf.d/99-macpro.conf
+
+# image-builder embeds this exact locally pulled reference in the ISO.
+# The installed machine follows the original registry tag for future updates.
+RUN test -n "$PAYLOAD_IMAGE" && \
+    printf 'rootpw --lock\nbootc --source-imgref containers-storage:%s --target-imgref %s\n' \
+        "$PAYLOAD_IMAGE" "$PAYLOAD_IMAGE" \
+        > /usr/share/anaconda/interactive-defaults.ks && \
+    ksvalidator /usr/share/anaconda/interactive-defaults.ks
+
+# Prepare Anaconda's live environment; these changes never enter the payload.
+RUN mkdir -p /boot/efi && \
+    cp -a /usr/lib/efi/*/*/EFI /boot/efi/ && \
+    printf 'install:x:0:0:Installer:/root:/usr/libexec/anaconda/run-anaconda\n' >> /etc/passwd && \
+    printf 'install::14438:0:99999:7:::\n' >> /etc/shadow && \
+    passwd -d root && \
+    mv /usr/share/anaconda/list-harddrives-stub /usr/bin/list-harddrives && \
+    mv /etc/yum.repos.d /etc/anaconda.repos.d && \
+    ln -sfn /usr/lib/systemd/system/anaconda.target /etc/systemd/system/default.target && \
+    rm -f /usr/lib/systemd/system-generators/systemd-gpt-auto-generator && \
+    ln -sfn /usr/lib/systemd/system/anaconda-shell@.service /usr/lib/systemd/system/autovt@.service && \
+    mkdir -p /usr/lib/systemd/logind.conf.d /etc/systemd/user/pipewire.service.d \
+        /etc/systemd/user/pipewire.socket.d && \
+    printf '[Login]\nReserveVT=2\n' > /usr/lib/systemd/logind.conf.d/anaconda-shell.conf && \
+    printf '[Unit]\nConditionUser=\n' > /etc/systemd/user/pipewire.service.d/allowroot.conf && \
+    cp /etc/systemd/user/pipewire.service.d/allowroot.conf /etc/systemd/user/pipewire.socket.d/allowroot.conf && \
+    mkdir -p "$(realpath /root)" && \
+    kver=$(rpm -q kernel-core --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}') && \
+    DRACUT_NO_XATTR=1 dracut --force --zstd --reproducible --no-hostonly \
+        --add anaconda \
+        "/usr/lib/modules/${kver}/initramfs.img" "${kver}"
+
+# Fail during the container build if the generic ISO contract is incomplete.
+RUN failed=0; \
+    for tool in podman mksquashfs xorriso implantisomd5 grub2-mkimage python; do \
+        command -v "$tool" || { echo "Missing executable: $tool" >&2; failed=1; }; \
+    done; \
+    for file in /usr/share/grub/unicode.pf2 \
+        /boot/efi/EFI/fedora/shimx64.efi \
+        /boot/efi/EFI/fedora/gcdx64.efi; do \
+        test -s "$file" || { echo "Missing or empty boot file: $file" >&2; failed=1; }; \
+    done; \
+    test -d /usr/lib/grub/i386-pc || { echo "Missing BIOS modules: /usr/lib/grub/i386-pc" >&2; failed=1; }; \
+    exit "$failed"
