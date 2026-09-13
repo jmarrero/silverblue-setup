@@ -9,7 +9,7 @@ RUN \
     dnf -y install \
         "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm" && \
     kver=$(rpm -q kernel-core --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}') && \
-    # Silverblue composes can contain a kernel that is still in updates-testing.
+    # Fedora Atomic desktop composes can contain a kernel that is still in updates-testing.
     # Enable it only for the exact matching kernel-devel package.
     dnf -y --enablerepo=updates-testing install \
         akmods "kernel-devel-${kver}" && \
